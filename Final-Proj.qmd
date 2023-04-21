@@ -8,11 +8,9 @@ execute:
 output:
     html_document:
         smooth-scroll: true
-    # theme:
-    #   light: cosmo
     theme:
-        light: flatly
-        dark: darkly
+      light: cosmo
+
     highlight: zenburn
     toc: true
     toc_depth: 2
@@ -25,11 +23,20 @@ format:
     embed-resources: true
     code-fold: true
     page-layout: full
+    fig-cap-location: bottom
+
+sidebar:
+  contents: auto
 #reference-location: margin
 #citation-location: margin
 #bibliography: skeleton.bib
 ---
+### Data Source & Description
+[data source](https://popstats.unhcr.org/refugee-statistics/download/)
 
+
+### Overall Gendered Refugee Populations by Country of Asylum
+```{python}
 ```{python}
 import pandas as pd
 import numpy as np
@@ -76,11 +83,14 @@ def iso_to_continent(country_iso):
 demographics['continent'] = demographics['Country of asylum (ISO)'].apply(iso_to_continent)
 ```
 
+
+This chart below displays the number of male and female refugees who sought asylum in different countries from different countries of origin. Each bubble represents the total number of refugees who sought asylum in a particular country, with size indicating magnitude. The x-axis represents the number of female refugees, the y-axis represents the number of male refugees, and color represents the continent of the country of asylum. The position of each bubble indicates the country of asylum. 
+
 ```{python}
 # | label: fig-charts
-# | fig-cap: "Total Population by Gender in Each Country, Colored by Continent"
+# | fig-cap: "Gendered Refugee Populations by Country of Asylum"
 
-# Aggregate the data by 'Year', 'Country of asylum (ISO)', and 'continent', summing the values for each age group and gender
+# aggregate the data by 'Year', 'Country of asylum (ISO)', and 'continent', summing the values for each age group and gender
 grouped_data = demographics.groupby(['Year', 'Country of asylum (ISO)', 'continent']).agg({
     'Female 0 - 4': 'sum',
     'Female 5 - 11': 'sum',
@@ -97,27 +107,48 @@ grouped_data = demographics.groupby(['Year', 'Country of asylum (ISO)', 'contine
     'Total': 'sum'
 }).reset_index()
 
-#add a new column with country names
-grouped_data['Country of asylum'] = grouped_data['Country of asylum (ISO)'].apply(lambda x: pycountry.countries.get(alpha_3=x).name)
+# add a new column with country names
+grouped_data['Country of asylum'] = grouped_data['Country of asylum (ISO)'].apply(
+    lambda x: pycountry.countries.get(alpha_3=x).name)
 
-#create a bubble chart using Plotly Express with a slider for the 'Year' column
-fig = px.scatter(grouped_data, x='Female total', y='Male total', size='Total', 
-                 color='continent', hover_name='Country of asylum', log_x=True, log_y=True, 
-                 size_max=60, title='Total Population by Gender in Each Country, Colored by Continent',
+# create a bubble chart using Plotly Express with a slider for the 'Year' column
+fig = px.scatter(grouped_data, x='Female total', y='Male total', size='Total',
+                 color='continent', hover_name='Country of asylum', log_x=True, log_y=True,
+                 size_max=60, title='Gendered Refugee Populations by Country of Asylum',
                  animation_frame='Year', range_x=[grouped_data['Female total'].min()+1, grouped_data['Female total'].max()],
                  range_y=[grouped_data['Male total'].min()+1, grouped_data['Male total'].max()])
 
 # Show the bubble chart
 fig.update_layout(
     margin=dict(l=20, r=100, t=80, b=20),
-    xaxis=dict(title='Female Total', autorange=True),
-    yaxis=dict(title='Male Total', autorange=True),
-    width=1200, height=750
+    xaxis=dict(title='Female Total', autorange=True, title_font={'family': 'Times New Roman', 'size': 16}),
+    yaxis=dict(title='Male Total', autorange=True, title_font={'family': 'Times New Roman', 'size': 16}),
+    width=1200, height=750,
+    title={
+        'text': 'Gendered Refugee Populations by Country of Asylum',
+        'font': {'family': 'Times New Roman', 'size': 28},
+        'x': 0.5,
+        'y': 0.95
+    },
+    legend={
+        'title': {'text': 'Continent', 'font': {'family': 'Times New Roman', 'size': 16}},
+        'font': {'family': 'Times New Roman', 'size': 14}
+    },
 )
 
 fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = 1000
 fig.show()
 ```
+
+::: {.callout-tip}
+## Note
+
+While the data is complete for the total number of people seeking asylum, some rows do not provide separate totals for male and female refugees. In these cases, the Male total adds Female total may not add up to the Total number of refugees.
+:::
+
+With the passage of time, the total number of people seeking asylum abroad has been steadily increasing year by year. Men and women tend to seek asylum in roughly equal proportions. Focusing on Europe, it is observed that prior to 2019, the total number of asylum seekers in the region remained relatively stable, with little variation from year to year. However, after 2020, there has been a significant surge in the number of people seeking asylum in Europe.
+
+This increase can be partly attributed to the escalation of conflict between Russia and Ukraine. As the war intensified, thousands of civilians were displaced from their homes, leading many to seek refuge in neighboring European countries. The ongoing conflict has led to widespread devastation and suffering, driving an increasing number of individuals and families to seek safety and stability outside their home countries. The situation has placed additional pressure on European nations to accommodate and support the growing number of asylum seekers fleeing the region's turmoil.
 
 ```{python}
 df = df.rename(columns={'Country of origin':'origin', 'Country of origin (ISO)':'origin_iso', 'Country of asylum':'asylum', 
@@ -125,39 +156,28 @@ df = df.rename(columns={'Country of origin':'origin', 'Country of origin (ISO)':
                         'Asylum-seekers':'asylum_seekers', 'IDPs of concern to UNHCR':'idps_of_concern', 
                         'Other people in need of international protection':'need_protect', 'Stateless persons':'stateless',
                         'Host Community':'host', 'Others of concern':'other_of_concern'})
-
 df = df[df.origin != "Unknown "]
 df = df[df.Year>=2000]
 # df = df[df.refugees>=100]
 df = df.reset_index(drop=True)
-
 df_europe = df[(df.asylum_iso).isin(EUROPEAN_UNION)]
 df_europe = df_europe.reset_index(drop=True)
-
-df_europe.loc[df_europe["origin"]=="Serbia and Kosovo: S/RES/1244 (1999)", "origin"] = "Serbia"
-df_europe.loc[df_europe["origin"]=="Russian Federation", "origin"] = "Russia"
 
 df_europe_ori_mean = df_europe.groupby(["origin"], as_index=False).mean()
 top_ori = df_europe_ori_mean.sort_values(by='refugees', ascending=False).head(10)
 df_europe_ori_year = df_europe.groupby(["origin", "Year"], as_index=False).mean()
 df_europe_ori_year = df_europe_ori_year[(df_europe_ori_year.origin).isin(top_ori.origin)]
-
 df_europe_asy_mean = df_europe.groupby(["asylum"], as_index=False).mean()
 top_asy = df_europe_asy_mean.sort_values(by='refugees', ascending=False).head(10)
 df_europe_asy_year = df_europe.groupby(["asylum", "Year"], as_index=False).mean()
 df_europe_asy_year = df_europe_asy_year[(df_europe_asy_year.asylum).isin(top_asy.asylum)]
 ```
 
-Next, we will move on to see the detailed situation of the refugees in Europe. We know that Europe is one of, if not the most developed continent in the world. Many of the European countries are rich and stable enough to provide asylums, especially in the 21st century when there are serious wars, diseases in some of part of the world.
-
-Therefore, this part will focus on some of the key questions: What origin countries have the most of refugees escaped to Europe? What European countries host the asylums the most? What are these situations like during different times in the 21st century? These questions will be answered by the graphs below.
-
 ```{python}
 # | label: fig-charts1
 # | fig-cap: "Origin Countries with Most Refugees Escaped to Europe"
 selection = alt.selection_single(fields=["origin"], name="random")
 color = alt.condition(selection, alt.value("red"), alt.value("lightgrey"))
-
 bar1 = (alt.Chart(df_europe_ori_mean)
         .mark_bar()
         .encode(x=alt.X("origin:N", sort=alt.EncodingSortField(field="refugees", op="mean", order="descending")),
@@ -171,7 +191,6 @@ bar1 = (alt.Chart(df_europe_ori_mean)
     (alt.datum.rank < 10)
 ).add_selection(selection)
 bar1.title = "Countries with Most Refugees to Europe"
-bar1.encoding.x.title = "Origin Country"
 
 
 color1 = alt.condition(selection, alt.Color("origin:N"), alt.value("lightgrey"))
@@ -181,7 +200,6 @@ line1 = (alt.Chart(df_europe_ori_year)
                 y=alt.Y("refugees:Q"),
                 color=color1
         )
-
 ).add_selection(selection)
 line1.title = "Numbers of Refugees to Europe Each Year"
 line1.encoding.y.title = "Refugees"
@@ -193,7 +211,6 @@ alt.hconcat(bar1, line1)
 # | fig-cap: "Europe Countries with Most Asylums Hosted"
 selection2 = alt.selection_single(fields=["asylum"], name="random")
 color2 = alt.condition(selection2, alt.value("red"), alt.value("lightgrey"))
-
 bar2 = (alt.Chart(df_europe_asy_mean)
         .mark_bar()
         .encode(x=alt.X("asylum:N", sort=alt.EncodingSortField(field="refugees", op="mean", order="descending")),
@@ -207,7 +224,7 @@ bar2 = (alt.Chart(df_europe_asy_mean)
     (alt.datum.rank < 10)
 ).add_selection(selection2)
 bar2.title = "European Countries with Most Refugees Accepted"
-bar2.encoding.x.title = "Asylum Country"
+
 
 color3 = alt.condition(selection2, alt.Color("asylum:N"), alt.value("lightgrey"))
 line2 = (alt.Chart(df_europe_asy_year)
@@ -216,7 +233,6 @@ line2 = (alt.Chart(df_europe_asy_year)
                 y=alt.Y("refugees:Q"),
                 color=color3
         )
-
 ).add_selection(selection2)
 line2.title = "Numbers of Refugees to Each Europe Countries Each Year"
 line2.encoding.y.title = "Refugees"
