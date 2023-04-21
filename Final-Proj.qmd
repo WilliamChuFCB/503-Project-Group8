@@ -120,7 +120,6 @@ fig.show()
 ```
 
 ```{python}
-
 df = df.rename(columns={'Country of origin':'origin', 'Country of origin (ISO)':'origin_iso', 'Country of asylum':'asylum', 
                         'Country of asylum (ISO)':'asylum_iso', "Refugees under UNHCR's mandate":'refugees', 
                         'Asylum-seekers':'asylum_seekers', 'IDPs of concern to UNHCR':'idps_of_concern', 
@@ -135,6 +134,9 @@ df = df.reset_index(drop=True)
 df_europe = df[(df.asylum_iso).isin(EUROPEAN_UNION)]
 df_europe = df_europe.reset_index(drop=True)
 
+df_europe.loc[df_europe["origin"]=="Serbia and Kosovo: S/RES/1244 (1999)", "origin"] = "Serbia"
+df_europe.loc[df_europe["origin"]=="Russian Federation", "origin"] = "Russia"
+
 df_europe_ori_mean = df_europe.groupby(["origin"], as_index=False).mean()
 top_ori = df_europe_ori_mean.sort_values(by='refugees', ascending=False).head(10)
 df_europe_ori_year = df_europe.groupby(["origin", "Year"], as_index=False).mean()
@@ -146,9 +148,13 @@ df_europe_asy_year = df_europe.groupby(["asylum", "Year"], as_index=False).mean(
 df_europe_asy_year = df_europe_asy_year[(df_europe_asy_year.asylum).isin(top_asy.asylum)]
 ```
 
+Next, we will move on to see the detailed situation of the refugees in Europe. We know that Europe is one of, if not the most developed continent in the world. Many of the European countries are rich and stable enough to provide asylums, especially in the 21st century when there are serious wars, diseases in some of part of the world.
+
+Therefore, this part will focus on some of the key questions: What origin countries have the most of refugees escaped to Europe? What European countries host the asylums the most? What are these situations like during different times in the 21st century?
+
 ```{python}
 # | label: fig-charts1
-# | fig-cap: "Total Population by Gender in Each Country, Colored by Continent"
+# | fig-cap: "Origin Countries with Most Refugees Escaped to Europe"
 selection = alt.selection_single(fields=["origin"], name="random")
 color = alt.condition(selection, alt.value("red"), alt.value("lightgrey"))
 
@@ -165,6 +171,7 @@ bar1 = (alt.Chart(df_europe_ori_mean)
     (alt.datum.rank < 10)
 ).add_selection(selection)
 bar1.title = "Countries with Most Refugees to Europe"
+bar1.encoding.x.title = "Origin Country"
 
 
 color1 = alt.condition(selection, alt.Color("origin:N"), alt.value("lightgrey"))
@@ -183,7 +190,7 @@ alt.hconcat(bar1, line1)
 
 ```{python}
 # | label: fig-charts2
-# | fig-cap: "Total Population by Gender in Each Country, Colored by Continent"
+# | fig-cap: "Europe Countries with Most Asylums Hosted"
 selection2 = alt.selection_single(fields=["asylum"], name="random")
 color2 = alt.condition(selection2, alt.value("red"), alt.value("lightgrey"))
 
@@ -200,7 +207,7 @@ bar2 = (alt.Chart(df_europe_asy_mean)
     (alt.datum.rank < 10)
 ).add_selection(selection2)
 bar2.title = "European Countries with Most Refugees Accepted"
-
+bar2.encoding.x.title = "Asylum Country"
 
 color3 = alt.condition(selection2, alt.Color("asylum:N"), alt.value("lightgrey"))
 line2 = (alt.Chart(df_europe_asy_year)
@@ -215,5 +222,3 @@ line2.title = "Numbers of Refugees to Each Europe Countries Each Year"
 line2.encoding.y.title = "Refugees"
 alt.hconcat(bar2, line2)
 ```
-
-```{python}
