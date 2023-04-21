@@ -1,0 +1,219 @@
+---
+title: "Refugee Crisis in Europe in the 21st Century"
+author:
+  - name: Jingda Yang, Wendi Chu, Haiyu Xiao, Tingsong Li
+
+execute:
+    echo: false
+output:
+    html_document:
+        smooth-scroll: true
+    # theme:
+    #   light: cosmo
+    theme:
+        light: flatly
+        dark: darkly
+    highlight: zenburn
+    toc: true
+    toc_depth: 2
+    margin-left: 5in
+    margin-right: 5in
+    pdf_document:
+        toc: true
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+    page-layout: full
+#reference-location: margin
+#citation-location: margin
+#bibliography: skeleton.bib
+---
+
+```{python}
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import pycountry
+import pycountry_convert
+import plotly.express as px
+
+
+import plotly.io as pio
+pio.renderers.default='plotly_mimetype+notebook_connected'
+import altair as alt
+from countrygroups import EUROPEAN_UNION
+
+import warnings
+warnings.filterwarnings('ignore')
+```
+
+```{python}
+# read data
+demographics = pd.read_csv('./demographics.csv')
+decision = pd.read_csv('./asylum-decisions.csv')
+df = pd.read_csv("./population.csv")
+```
+
+```{python}
+demographics = demographics[demographics['Country of origin (ISO)'] != demographics['Country of asylum (ISO)']]
+import pandas as pd
+import pycountry
+from pycountry_convert import country_alpha2_to_continent_code, convert_continent_code_to_continent_name
+
+def iso_to_continent(country_iso):
+    try:
+        country = pycountry.countries.get(alpha_3=country_iso)
+        country_alpha2 = country.alpha_2
+        continent_code = country_alpha2_to_continent_code(country_alpha2)
+        continent_name = convert_continent_code_to_continent_name(continent_code)
+        return continent_name
+    except (KeyError, AttributeError):
+        return None
+
+
+#create a new column 'continent' by applying the conversion function to the 'Country of asylum (ISO)' column
+demographics['continent'] = demographics['Country of asylum (ISO)'].apply(iso_to_continent)
+```
+
+```{python}
+# | label: fig-charts
+# | fig-cap: "Total Population by Gender in Each Country, Colored by Continent"
+
+# Aggregate the data by 'Year', 'Country of asylum (ISO)', and 'continent', summing the values for each age group and gender
+grouped_data = demographics.groupby(['Year', 'Country of asylum (ISO)', 'continent']).agg({
+    'Female 0 - 4': 'sum',
+    'Female 5 - 11': 'sum',
+    'Female 12 - 17': 'sum',
+    'Female 18 - 59': 'sum',
+    'Female 60': 'sum',
+    'Female total': 'sum',
+    'Male 0 - 4': 'sum',
+    'Male 5 - 11': 'sum',
+    'Male 12 - 17': 'sum',
+    'Male 18 - 59': 'sum',
+    'Male 60': 'sum',
+    'Male total': 'sum',
+    'Total': 'sum'
+}).reset_index()
+
+#add a new column with country names
+grouped_data['Country of asylum'] = grouped_data['Country of asylum (ISO)'].apply(lambda x: pycountry.countries.get(alpha_3=x).name)
+
+#create a bubble chart using Plotly Express with a slider for the 'Year' column
+fig = px.scatter(grouped_data, x='Female total', y='Male total', size='Total', 
+                 color='continent', hover_name='Country of asylum', log_x=True, log_y=True, 
+                 size_max=60, title='Total Population by Gender in Each Country, Colored by Continent',
+                 animation_frame='Year', range_x=[grouped_data['Female total'].min()+1, grouped_data['Female total'].max()],
+                 range_y=[grouped_data['Male total'].min()+1, grouped_data['Male total'].max()])
+
+# Show the bubble chart
+fig.update_layout(
+    margin=dict(l=20, r=100, t=80, b=20),
+    xaxis=dict(title='Female Total', autorange=True),
+    yaxis=dict(title='Male Total', autorange=True),
+    width=1200, height=750
+)
+
+fig.layout.updatemenus[0].buttons[0].args[1]["frame"]["duration"] = 1000
+fig.show()
+```
+
+```{python}
+
+df = df.rename(columns={'Country of origin':'origin', 'Country of origin (ISO)':'origin_iso', 'Country of asylum':'asylum', 
+                        'Country of asylum (ISO)':'asylum_iso', "Refugees under UNHCR's mandate":'refugees', 
+                        'Asylum-seekers':'asylum_seekers', 'IDPs of concern to UNHCR':'idps_of_concern', 
+                        'Other people in need of international protection':'need_protect', 'Stateless persons':'stateless',
+                        'Host Community':'host', 'Others of concern':'other_of_concern'})
+
+df = df[df.origin != "Unknown "]
+df = df[df.Year>=2000]
+# df = df[df.refugees>=100]
+df = df.reset_index(drop=True)
+
+df_europe = df[(df.asylum_iso).isin(EUROPEAN_UNION)]
+df_europe = df_europe.reset_index(drop=True)
+
+df_europe_ori_mean = df_europe.groupby(["origin"], as_index=False).mean()
+top_ori = df_europe_ori_mean.sort_values(by='refugees', ascending=False).head(10)
+df_europe_ori_year = df_europe.groupby(["origin", "Year"], as_index=False).mean()
+df_europe_ori_year = df_europe_ori_year[(df_europe_ori_year.origin).isin(top_ori.origin)]
+
+df_europe_asy_mean = df_europe.groupby(["asylum"], as_index=False).mean()
+top_asy = df_europe_asy_mean.sort_values(by='refugees', ascending=False).head(10)
+df_europe_asy_year = df_europe.groupby(["asylum", "Year"], as_index=False).mean()
+df_europe_asy_year = df_europe_asy_year[(df_europe_asy_year.asylum).isin(top_asy.asylum)]
+```
+
+```{python}
+# | label: fig-charts1
+# | fig-cap: "Total Population by Gender in Each Country, Colored by Continent"
+selection = alt.selection_single(fields=["origin"], name="random")
+color = alt.condition(selection, alt.value("red"), alt.value("lightgrey"))
+
+bar1 = (alt.Chart(df_europe_ori_mean)
+        .mark_bar()
+        .encode(x=alt.X("origin:N", sort=alt.EncodingSortField(field="refugees", op="mean", order="descending")),
+                y=alt.Y("mean(refugees):Q"),
+                color=color
+        )
+).transform_window(
+    rank='rank(refugees)',
+    sort=[alt.SortField("refugees", order="descending")]
+).transform_filter(
+    (alt.datum.rank < 10)
+).add_selection(selection)
+bar1.title = "Countries with Most Refugees to Europe"
+
+
+color1 = alt.condition(selection, alt.Color("origin:N"), alt.value("lightgrey"))
+line1 = (alt.Chart(df_europe_ori_year)
+        .mark_line().encode(
+                x=alt.X('Year:O'),
+                y=alt.Y("refugees:Q"),
+                color=color1
+        )
+
+).add_selection(selection)
+line1.title = "Numbers of Refugees to Europe Each Year"
+line1.encoding.y.title = "Refugees"
+alt.hconcat(bar1, line1)
+```
+
+```{python}
+# | label: fig-charts2
+# | fig-cap: "Total Population by Gender in Each Country, Colored by Continent"
+selection2 = alt.selection_single(fields=["asylum"], name="random")
+color2 = alt.condition(selection2, alt.value("red"), alt.value("lightgrey"))
+
+bar2 = (alt.Chart(df_europe_asy_mean)
+        .mark_bar()
+        .encode(x=alt.X("asylum:N", sort=alt.EncodingSortField(field="refugees", op="mean", order="descending")),
+                y=alt.Y("mean(refugees):Q"),
+                color=color
+        )
+).transform_window(
+    rank='rank(refugees)',
+    sort=[alt.SortField("refugees", order="descending")]
+).transform_filter(
+    (alt.datum.rank < 10)
+).add_selection(selection2)
+bar2.title = "European Countries with Most Refugees Accepted"
+
+
+color3 = alt.condition(selection2, alt.Color("asylum:N"), alt.value("lightgrey"))
+line2 = (alt.Chart(df_europe_asy_year)
+        .mark_line().encode(
+                x=alt.X('Year:O'),
+                y=alt.Y("refugees:Q"),
+                color=color3
+        )
+
+).add_selection(selection2)
+line2.title = "Numbers of Refugees to Each Europe Countries Each Year"
+line2.encoding.y.title = "Refugees"
+alt.hconcat(bar2, line2)
+```
+
+```{python}
