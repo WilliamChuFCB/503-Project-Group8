@@ -150,7 +150,7 @@ df_europe_asy_year = df_europe_asy_year[(df_europe_asy_year.asylum).isin(top_asy
 
 Next, we will move on to see the detailed situation of the refugees in Europe. We know that Europe is one of, if not the most developed continent in the world. Many of the European countries are rich and stable enough to provide asylums, especially in the 21st century when there are serious wars, diseases in some of part of the world.
 
-Therefore, this part will focus on some of the key questions: What origin countries have the most of refugees escaped to Europe? What European countries host the asylums the most? What are these situations like during different times in the 21st century?
+Therefore, this part will focus on some of the key questions: What origin countries have the most of refugees escaped to Europe? What European countries host the asylums the most? What are these situations like during different times in the 21st century? These questions will be answered by the graphs below.
 
 ```{python}
 # | label: fig-charts1
