@@ -5,19 +5,19 @@ author:
 
 execute:
     echo: false
-output:
-    html_document:
-        smooth-scroll: true
-    theme:
-      light: cosmo
+# output:
+#     html_document:
+#         smooth-scroll: true
+#     theme:
+#       light: cosmo
 
-    highlight: zenburn
-    toc: true
-    toc_depth: 2
-    margin-left: 5in
-    margin-right: 5in
-    pdf_document:
-        toc: true
+#     highlight: zenburn
+#     toc: true
+#     toc_depth: 2
+#     margin-left: 5in
+#     margin-right: 5in
+#     pdf_document:
+#         toc: true
 format:
   html:
     theme: united
@@ -25,14 +25,20 @@ format:
     code-fold: true
     page-layout: full
     fig-cap-location: bottom
+    toc: true
+    toc-location: left
+    toc-title: Contents
+    grid:
+      sidebar-width: 130px
+      body-width: 1000px
 
-sidebar:
-  contents: auto
+# sidebar:
+#   contents: auto
 #reference-location: margin
 #citation-location: margin
 #bibliography: skeleton.bib
 ---
-### Data Source & Description
+### Data Source
 [data source](https://popstats.unhcr.org/refugee-statistics/download/)
 
 ### Introduction
@@ -60,7 +66,7 @@ warnings.filterwarnings('ignore')
 
 
 
-### Overall Gendered Refugee Populations by Country of Asylum
+### 1. Overall Gendered Refugee Populations by Country of Asylum
 ```{python}
 # | label: fig-map
 # | fig-cap: "Origin and asylum of refugees (2002 to 2022)"
@@ -79,7 +85,7 @@ def iso_to_continent(country_iso):
     except (KeyError, AttributeError):
         return None
 
-df = pd.read_csv("population1.csv")
+df = pd.read_csv("./data/population1.csv")
 df = df.dropna(subset=['Country of origin (ISO)', 'Country of asylum (ISO)'])
 
 df['asy_continent'] = df['Country of asylum (ISO)'].apply(iso_to_continent)
@@ -246,9 +252,9 @@ By looking at the choropleth map, we could find that at the beginning of the 21s
 
 ```{python}
 # read data
-demographics = pd.read_csv('./demographics.csv')
-decision = pd.read_csv('./asylum-decisions.csv')
-df = pd.read_csv("./population.csv")
+demographics = pd.read_csv('./data/demographics.csv')
+decision = pd.read_csv('./data/asylum-decisions.csv')
+df = pd.read_csv("./data/population.csv")
 ```
 
 ```{python}
@@ -362,6 +368,12 @@ df_europe_asy_year = df_europe.groupby(["asylum", "Year"], as_index=False).mean(
 df_europe_asy_year = df_europe_asy_year[(df_europe_asy_year.asylum).isin(top_asy.asylum)]
 ```
 
+### 2. Situation of Refugees in Europe
+
+Now we’ll move on to find the situation of the refugees in Europe. We know that Europe is one of, if not the most developed continent. Many European countries are rich and stable enough to hold asylums for refugees, especially when there are so many serious wars, diseases and other bad things happening all over the world.
+
+Therefore, this part focus on answering some questions: what are the countries that have the most refugees escaped to Europe? What European countries took care of the most refugees? What are these situations like during different times of this century?
+
 ```{python}
 # | label: fig-charts1
 # | fig-cap: "Origin Countries with Most Refugees Escaped to Europe"
@@ -428,17 +440,17 @@ line2.encoding.y.title = "Refugees"
 alt.hconcat(bar2, line2)
 ```
 
-### Demographics
+### 3. Demographics
 
 TO BE ADDED MORE INFORMATION
 
-### Specific Conflict Study: Conflict between Russia and Ukraine (2014 - 2022)
+### 4. Specific Conflict Study: Conflict between Russia and Ukraine (2014 - 2022)
 
 ```{python}
 # | label: fig-sunburst
 # | fig-cap: "Asylum Countries of Ukraine Refugees from 2014 to 2022"
 
-df = pd.read_csv("population1.csv")
+df = pd.read_csv("./data/population1.csv")
 
 df = df.dropna(subset=['Country of origin (ISO)', 'Country of asylum (ISO)'])
 
@@ -514,7 +526,7 @@ fig.show()
 
 Even though the conflict between Russia and Ukraine started in 2014, most refugees are forced to leave their homes and seek new asylum in 2022. That is because tensions between Russia and Ukraine grew after the former took Crimea in 2014, and throughout the years, various peace talks and ceasefire agreements have been held. However, the situation in the region remains volatile. In 2022, Russian troops crossed Ukraine's border. This led to the largest conflicts in eastern Ukraine since Crimea was occupied by Russia in 2014. 
 
-### Global and European Refugee Flow
+### 5. Global and European Refugee Flow
 ```{python}
 import pandas as pd
 import numpy as np
@@ -525,7 +537,7 @@ from pyecharts import options as opts
 import warnings
 warnings.filterwarnings("ignore")
 
-popu=pd.read_csv("population.csv")
+popu=pd.read_csv("./data/population.csv")
 
 popu1=popu.loc[:,["Year","Country of origin (ISO)","Country of asylum (ISO)","Refugees under UNHCR's mandate"]]
 
@@ -691,6 +703,6 @@ pic_eu.render_notebook()
 
 Unlike the former plot of global refugee flows, this graph only display refugees from and to Europe since 2002. From this plot, we notice that most of refugees that origin from Europe move to other European countries and a considerable number of refugees move to North America. By contrast, for the refugees move to Europe, almost half are from Asia, followed by Europe and Africa.
 
-### Specific Conflict Study: Conflict of Balkans (2002 - 2010)
+### 6. Specific Conflict Study: Conflict of Balkans (2002 - 2010)
 
 TO BE ADDED MORE INFORMATION
