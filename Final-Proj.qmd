@@ -34,9 +34,13 @@ sidebar:
 ### Data Source & Description
 [data source](https://popstats.unhcr.org/refugee-statistics/download/)
 
+### Introduction
+
+“Refugee” is still one of the most common words we heard in geopolitical news, even though we are living in a relatively peaceful era. When watching the news about refugees, people are impressed by the sadness that refugees lost their homelands and the pain that they suffered as looking for the asylums. However, only a few people would think of the stress from the countries providing asylums. n a gesture of humanity, many European countries generously open their door and provide asylum for refugees all over the world. In 2015, more than 1.3 million refugees came to the continent to request asylum, which is the most year after World War II. Not only the financial pressure, but the differences in terms of culture and religion between refugees and local residents are also challenging the governments of European countries. Additionally, the situations of refugees from conflicts in Europe such as Ukraine and the Balkans, who also face similar struggles, have been largely ignored, as they are often seen as being from "first-world" countries.
+
+In this project, we will be focusing on two groups of refugees in 21st-century Europe. The first group consists of refugees looking for asylums in Europe, and the second group comprises refugees from European countries who have settled all over the world. Our analysis will include an overview of the origin countries and asylum countries of the refugees, as well as demographic data such as age and gender. We will also investigate the application and approval rates of the refugees seeking asylum in Europe. Furthermore, we will concentrate on two major conflicts that have generated significant refugee populations: the conflicts between Ukraine and Russia, as well as the Balkan conflicts. 
 
 ### Overall Gendered Refugee Populations by Country of Asylum
-```{python}
 ```{python}
 import pandas as pd
 import numpy as np
@@ -54,6 +58,189 @@ from countrygroups import EUROPEAN_UNION
 import warnings
 warnings.filterwarnings('ignore')
 ```
+
+```{python}
+# | label: fig-map
+# | fig-cap: "Origin and asylum of refugees (2002 to 2022)"
+
+import pandas as pd
+import plotly.graph_objects as go
+import pycountry
+from pycountry_convert import country_alpha2_to_continent_code, convert_continent_code_to_continent_name
+def iso_to_continent(country_iso):
+    try:
+        country = pycountry.countries.get(alpha_3=country_iso)
+        country_alpha2 = country.alpha_2
+        continent_code = country_alpha2_to_continent_code(country_alpha2)
+        continent_name = convert_continent_code_to_continent_name(continent_code)
+        return continent_name
+    except (KeyError, AttributeError):
+        return None
+
+df = pd.read_csv("population1.csv")
+df = df.dropna(subset=['Country of origin (ISO)', 'Country of asylum (ISO)'])
+
+df['asy_continent'] = df['Country of asylum (ISO)'].apply(iso_to_continent)
+df['ori_continent'] = df['Country of origin (ISO)'].apply(iso_to_continent)
+
+df3 = df[df["asy_continent"] == "Europe"]
+df4 = df[df["ori_continent"] == "Europe"]
+
+df3 = df3.groupby(["Year","Country of origin (ISO)", "Country of origin", 'ori_continent']).sum().reset_index()
+df4 = df4.groupby(["Year","Country of asylum (ISO)", "Country of asylum", 'asy_continent']).sum().reset_index()
+
+
+
+df3 = df3[df3["Year"] >= 2002]
+df4 = df4[df4["Year"] >= 2002]
+
+df3["text"] = df3["Country of origin"] + '<br>' + \
+df3["ori_continent"]
+
+
+# INITIALIZE GRAPH OBJECT
+
+fig = go.Figure()
+
+list1 = [False] * 46
+list1[0] = True
+
+list2 = [False] * 46
+list2[23] = True
+
+
+years = list(range(2002,2023))
+
+# ADD A CHOROPLETH TRACES FOR THE DATA-FRAME
+
+sliders = []
+steps = []
+i=0
+
+for year in years:
+    fig.add_trace(  # Add A trace to the figure
+        go.Choropleth(  # Specify the type of the trace
+            uid="full-set",  # uid=unique id (Assign an ID to the trace)
+            locations=df3.loc[(df3['Year'] == year)]["Country of origin (ISO)"],  # Supply location information tag for mapping
+            z=df3.loc[(df3['Year'] == year)]["Refugees under UNHCR's mandate"],  # Data to be color-coded on graph
+            colorbar_title="Refugee",  # Title for color-bar
+            colorscale = 'Reds',
+            text=df3.loc[(df3['Year'] == year)]["Country of origin"],
+            visible=False,  # Specify whether or not to make data-visible when rendered
+        )
+    )
+
+    step = dict(
+        label= year,
+        method="update",
+        args=[{"visible": [False] * 42}],  # layout attribute
+    )
+    # print(i)
+    step["args"][0]["visible"][i] = True  # Toggle i'th trace to "visible"
+    steps.append(step)
+
+    i += 1
+
+
+slider = [dict(
+    active=0,
+    currentvalue={"prefix": "Year: "},
+    pad={"t": 50},
+    steps=steps
+)]
+sliders.append(slider)
+
+# b2
+steps = []
+for year in years:
+    fig.add_trace(  # Add A trace to the figure
+        go.Choropleth(  # Specify the type of the trace
+            uid="full-set",  # uid=unique id (Assign an ID to the trace)
+            locations=df4.loc[(df4['Year'] == year)]["Country of asylum (ISO)"],  # Supply location information tag for mapping
+            z=df4.loc[(df4['Year'] == year)]["Refugees under UNHCR's mandate"],  # Data to be color-coded on graph
+            colorbar_title="Refugee",  # Title for color-bar
+            colorscale = 'Reds',
+            text=df4.loc[(df4['Year'] == year)]["Country of asylum"],
+            visible=False,  # Specify whether or not to make data-visible when rendered
+        )
+    )
+
+    step = dict(
+        label= year,
+        method="update",
+        args=[{"visible": [False] * 42}],  # layout attribute
+    )
+    # print(i)
+    step["args"][0]["visible"][i] = True  # Toggle i'th trace to "visible"
+    steps.append(step)
+
+    i += 1
+
+
+slider = [dict(
+    active=0,
+    currentvalue={"prefix": "Year: "},
+    pad={"t": 50},
+    steps=steps
+)]
+sliders.append(slider)
+
+
+# VARIABLES FOR BUTTON LOCATION
+# (SET THESE BY TRIAL AND ERROR) 
+button_height = 0.15
+x1_loc = 0.32
+y1_loc = 1.25
+
+
+
+# DROPDOWN MENUS
+fig.update_layout(
+    title_text='Origin and asylum of refugees (2002 to 2022)',
+    # DEFINE A LIST OF THE VARIOUS BUTTONS (STORED AS DICTIONARIES)
+    updatemenus=[
+        # BUTTON-1: CONTINENTS
+        dict(
+            # NOTICE THAT THE OPTION ARE A LIST OF DICTIONARIES
+            # IMPORTANT: args specifies the key-value pairing for what to change
+            buttons=[
+                dict(
+                    label="Origin",            # LABEL SHOWN TO USER
+                    method="update",                    # MODIFICATION TYPE (SEE ABOVE)
+                     args=[{"visible": list1}, {"sliders" : sliders[0]}]
+                     ),
+                dict(
+                    label="Asylum",               # LABEL SHOWN TO USER
+                    method="update",           # MODIFICATION TYPE (SEE ABOVE)
+                     args=[{"visible": list2}, {"sliders" : sliders[1]}]
+                     ),  
+           
+            ],
+            # PLACEMENT AND META DATA FOR THE BUTTON
+            direction="down",
+            showactive=True,  # HIGHLIGHTS ACTIVE DROPDOWN ITEM OR ACTIVE BUTTON IF TRUE
+            pad={"r": 10, "t": 10},  # PADDING
+            x=x1_loc,  # POSITION
+            y=y1_loc,
+            xanchor="left",  # ANCHOR POINT
+            yanchor="top",
+        )
+    ]
+
+
+)
+
+
+
+
+
+fig.data[0].visible = True
+fig.update_layout(sliders=sliders[0])
+# SHOW
+fig.show()
+```
+
+By looking at the choropleth map, we could find that at the beginning of the 21st century, the origin of refugees seeking asylum in Europe is mainly from two areas: the Middle East and the Balkans. The major reason behind the large number of refugees in the Middle East, especially in Iraq is the Iraq war, which started in 2003 when the US-led invasion was carried out. The invasion was prompted by allegations that Iraq had weapons of mass destruction and greatly affected the condition in the Middle East area. The conflicts in the Balkans during the early 21st century were a series of ethnic and political disputes that emerged after the breakup of Yugoslavia in the 1990s. These conflicts resulted in violence and instability in the region with millions of refugees. After 2012, Syria and Ukraine became the main origin of the refugees. In the matter of European asylum, Germany has become the leader of the continent since the early 21st century and France started accepting more refugees after 2012. Many Ukraine refugees moved to Russia, the opponent of the conflict.
 
 ```{python}
 # read data
@@ -238,3 +425,93 @@ line2.title = "Numbers of Refugees to Each Europe Countries Each Year"
 line2.encoding.y.title = "Refugees"
 alt.hconcat(bar2, line2)
 ```
+
+### Demographics
+
+TO BE ADDED MORE INFORMATION
+
+### Specific Conflict Study: Conflict between Russia and Ukraine (2014 - 2022)
+
+```{python}
+# | label: fig-sunburst
+# | fig-cap: "Asylum Countries of Ukraine Refugees from 2014 to 2022"
+
+df = pd.read_csv("population1.csv")
+
+df = df.dropna(subset=['Country of origin (ISO)', 'Country of asylum (ISO)'])
+
+import pycountry
+from pycountry_convert import country_alpha2_to_continent_code, convert_continent_code_to_continent_name
+
+def iso_to_continent(country_iso):
+    try:
+        country = pycountry.countries.get(alpha_3=country_iso)
+        country_alpha2 = country.alpha_2
+        continent_code = country_alpha2_to_continent_code(country_alpha2)
+        continent_name = convert_continent_code_to_continent_name(continent_code)
+        return continent_name
+    except (KeyError, AttributeError):
+        return None
+    
+#df['orig_continent'] = df['Country of origin (ISO)'].apply(iso_to_continent)
+df['asy_continent'] = df['Country of asylum (ISO)'].apply(iso_to_continent)
+
+df = df.dropna()
+
+df2 =df[df["Country of origin (ISO)"]=="UKR"]
+df2 = df2[df2["Year"] >= 2014]
+
+df3 = df2.groupby(["Country of asylum", "asy_continent"]).sum().sort_values(by=["Refugees under UNHCR's mandate"], ascending=False)
+
+df4 = df3[df3["Refugees under UNHCR's mandate"] != 0].reset_index()
+
+parents = df4["asy_continent"].tolist()
+labels = df4["Country of asylum"].tolist()
+
+values = df4["Refugees under UNHCR's mandate"].tolist()
+
+df = pd.DataFrame({'Labels': labels, 'Parents': parents, 'Values': values})
+
+add_parents = ["Ukraine"]*6+[""]
+add_labels = ["Europe", "North America", "South America", "Oceania", "Africa", "Asia", "Ukraine"]
+add_values = [6513730, 29476, 1314, 195, 67, 46648, 6591430]
+na_values = df["Values"].to_list()
+na_labels = df["Labels"].to_list()
+na_Parents = df["Parents"].to_list()
+
+import plotly.graph_objects as go
+
+fig =go.Figure(go.Sunburst(
+    labels=add_labels+na_labels,
+    parents=add_parents+na_Parents,
+    values=add_values+na_values,
+    branchvalues="total",
+))
+fig.update_layout(title_text="Asylum Countries of Ukraine Refugees from 2014 to 2022",width=800, height=600)
+
+fig.show()
+```
+
+According to the sunburst plot, from 2014 to 2022, 75% of the refugees from Ukraine are settled in Russia, Poland, Germany, and Czech. Only about 1% of refugees settled outside Europe, even though Ukraine is relatively close to Asian countries. In this case, we could conclude that other continents are not willing to share the pressure with Europe whereas Europe accepts a large number of refugees from other continents. There is also an interesting observation that more than one-third of the refugees from Ukraine seeking asylum in Russia,  which is the cause of the deadly conflict. The reason for such a paradox is that Russia is the most significant minority in eastern Ukraine so when the war began in eastern Ukraine, many residents went to Russia to avoid the flames of war.
+
+```{python}
+# | label: fig-area
+# | fig-cap: "Asylum Countries of Ukraine Refugees from 2014 to 2022"
+
+df3 = df2[df2["Country of asylum"].isin(["Russian Federation", "Poland", "Germany", "Czechia"])]
+df4 = df2[~df2["Country of asylum"].isin(["Russian Federation", "Poland", "Germany", "Czechia"])]
+df5 = df4.groupby("Year").sum().reset_index()
+df5["Country of asylum"] = "Other"
+df6 = pd.concat([df3[["Year", "Country of asylum", "Refugees under UNHCR's mandate"]], df5[["Year", "Country of asylum", "Refugees under UNHCR's mandate"]]])
+
+import plotly.express as px
+fig = px.area(df6, x="Year", y="Refugees under UNHCR's mandate", color="Country of asylum")
+fig.update_layout(title_text="Asylum Countries of Ukraine Refugees from 2014 to 2022")
+fig.show()
+```
+
+Even though the conflict between Russia and Ukraine started in 2014, most refugees are forced to leave their homes and seek new asylum in 2022. That is because tensions between Russia and Ukraine grew after the former took Crimea in 2014, and throughout the years, various peace talks and ceasefire agreements have been held. However, the situation in the region remains volatile. In 2022, Russian troops crossed Ukraine's border. This led to the largest conflicts in eastern Ukraine since Crimea was occupied by Russia in 2014. 
+
+### Specific Conflict Study: Conflict of Balkans (2002 - 2010)
+
+TO BE ADDED MORE INFORMATION
