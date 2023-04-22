@@ -20,6 +20,7 @@ output:
         toc: true
 format:
   html:
+    theme: united
     embed-resources: true
     code-fold: true
     page-layout: full
@@ -40,7 +41,6 @@ sidebar:
 
 In this project, we will be focusing on two groups of refugees in 21st-century Europe. The first group consists of refugees looking for asylums in Europe, and the second group comprises refugees from European countries who have settled all over the world. Our analysis will include an overview of the origin countries and asylum countries of the refugees, as well as demographic data such as age and gender. We will also investigate the application and approval rates of the refugees seeking asylum in Europe. Furthermore, we will concentrate on two major conflicts that have generated significant refugee populations: the conflicts between Ukraine and Russia, as well as the Balkan conflicts. 
 
-### Overall Gendered Refugee Populations by Country of Asylum
 ```{python}
 import pandas as pd
 import numpy as np
@@ -48,17 +48,19 @@ import plotly.express as px
 import pycountry
 import pycountry_convert
 import plotly.express as px
-
-
+from pyecharts.charts import  Sankey
+from pyecharts import options as opts
 import plotly.io as pio
 pio.renderers.default='plotly_mimetype+notebook_connected'
 import altair as alt
 from countrygroups import EUROPEAN_UNION
-
 import warnings
 warnings.filterwarnings('ignore')
 ```
 
+
+
+### Overall Gendered Refugee Populations by Country of Asylum
 ```{python}
 # | label: fig-map
 # | fig-cap: "Origin and asylum of refugees (2002 to 2022)"
@@ -511,6 +513,183 @@ fig.show()
 ```
 
 Even though the conflict between Russia and Ukraine started in 2014, most refugees are forced to leave their homes and seek new asylum in 2022. That is because tensions between Russia and Ukraine grew after the former took Crimea in 2014, and throughout the years, various peace talks and ceasefire agreements have been held. However, the situation in the region remains volatile. In 2022, Russian troops crossed Ukraine's border. This led to the largest conflicts in eastern Ukraine since Crimea was occupied by Russia in 2014. 
+
+### Global and European Refugee Flow
+```{python}
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import pycountry_convert as pc
+from pyecharts.charts import  Sankey
+from pyecharts import options as opts
+import warnings
+warnings.filterwarnings("ignore")
+
+popu=pd.read_csv("population.csv")
+
+popu1=popu.loc[:,["Year","Country of origin (ISO)","Country of asylum (ISO)","Refugees under UNHCR's mandate"]]
+
+popu1.columns=["year","Origin_ISO","Asylum_ISO","Number"]
+
+# only keep observations after 2002
+popu1=popu1[popu1.year>=2002]
+
+# delete rows with missing values
+popu1=popu1[-pd.isna(popu1.Origin_ISO)]
+popu1=popu1[-pd.isna(popu1.Asylum_ISO)]
+
+# delete rows of domestic refugee movement
+popu1=popu1[popu1.Origin_ISO!=popu1.Asylum_ISO]
+
+# delete rows with meaningless value
+popu1=popu1[popu1.Number!=0]
+
+popu1=popu1.reset_index().iloc[:,1:5]
+
+# define a function to get continent name for each country
+
+def country_to_continent(country_alpha3):
+    country_alpha2 = pc.country_alpha3_to_country_alpha2(country_alpha3)
+    country_continent_code = pc.country_alpha2_to_continent_code(country_alpha2)
+    country_continent_name = pc.convert_continent_code_to_continent_name(country_continent_code)
+    return country_continent_name
+
+origin_continent=[]
+asylum_continent=[]
+for i in range(len(popu1)):
+    try:
+        origin_continent.append(country_to_continent(popu1.Origin_ISO[i]))
+    except:
+        origin_continent.append('')
+    try:
+        asylum_continent.append(country_to_continent(popu1.Asylum_ISO[i]))
+    except:
+        asylum_continent.append('')
+    
+# add columns that display continents of origin and asylum country 
+popu1["Origin_continent"]=origin_continent
+popu1["Asylum_continent"]=asylum_continent
+
+popu1=popu1[popu1.Origin_continent!='']
+popu1=popu1[popu1.Asylum_continent!='']
+
+# group the data by origin and asylum continent
+df_grouped=popu1.groupby(['Origin_continent','Asylum_continent']).sum().iloc[:,1]
+
+# create nodes for the sankey plot
+nodes=[{'name':'Europe(from)'},{'name':'Africa(from)'},{'name':'Asia(from)'},
+       {'name':'North America(from)'},{'name':'South America(from)'},{'name':'Oceania(from)'},
+       {'name':'Europe(to)'},{'name':'Africa(to)'},{'name':'Asia(to)'},
+       {'name':'North America(to)'},{'name':'South America(to)'},{'name':'Oceania(to)'}]
+
+# create linkes for the sankey plot of global refugee movement
+linkes_all=[]
+for i in range(35):
+    dic={}
+    dic['source']=df_grouped.index[i][0]+"(from)"
+    dic['target']=df_grouped.index[i][1]+"(to)"
+    dic['value']=df_grouped[i]
+    linkes_all.append(dic)
+
+linkes_all.append({'source':'Oceania(from)','target':'South America(to)','value':0})
+
+linkes_all=[{'source': 'Africa(from)', 'target': 'Africa(to)', 'value': 84061708},
+ {'source': 'Africa(from)', 'target': 'Asia(to)', 'value': 4097435},
+ {'source': 'Africa(from)', 'target': 'Europe(to)', 'value': 8192838},
+ {'source': 'Africa(from)', 'target': 'North America(to)', 'value': 2351434},
+ {'source': 'Africa(from)', 'target': 'Oceania(to)', 'value': 192007},
+ {'source': 'Africa(from)', 'target': 'South America(to)', 'value': 79495},
+ {'source': 'Asia(from)', 'target': 'Africa(to)', 'value': 3855792},
+ {'source': 'Asia(from)', 'target': 'Asia(to)', 'value': 139136469},
+ {'source': 'Asia(from)', 'target': 'Europe(to)', 'value': 22189323},
+ {'source': 'Asia(from)', 'target': 'North America(to)', 'value': 3912121},
+ {'source': 'Asia(from)', 'target': 'Oceania(to)', 'value': 877000},
+ {'source': 'Asia(from)', 'target': 'South America(to)', 'value': 81297},
+ {'source': 'Europe(from)', 'target': 'Africa(to)', 'value': 1704},
+ {'source': 'Europe(from)', 'target': 'Asia(to)', 'value': 165855},
+ {'source': 'Europe(from)', 'target': 'Europe(to)', 'value': 14604476},
+ {'source': 'Europe(from)', 'target': 'North America(to)', 'value': 1363642},
+ {'source': 'Europe(from)', 'target': 'Oceania(to)', 'value': 57619},
+ {'source': 'Europe(from)', 'target': 'South America(to)', 'value': 11267},
+ {'source': 'North America(from)', 'target': 'Africa(to)', 'value': 59},
+ {'source': 'North America(from)', 'target': 'Asia(to)', 'value': 62},
+ {'source': 'North America(from)', 'target': 'Europe(to)', 'value': 178064},
+ {'source': 'North America(from)',
+  'target': 'North America(to)',
+  'value': 1782677},
+ {'source': 'North America(from)', 'target': 'Oceania(to)', 'value': 909},
+ {'source': 'North America(from)',
+  'target': 'South America(to)',
+  'value': 36185},
+ {'source': 'Oceania(from)', 'target': 'Africa(to)', 'value': 79},
+ {'source': 'Oceania(from)', 'target': 'Asia(to)', 'value': 25},
+ {'source': 'Oceania(from)', 'target': 'Europe(to)', 'value': 1316},
+ {'source': 'Oceania(from)', 'target': 'North America(to)', 'value': 19755},
+ {'source': 'Oceania(from)', 'target': 'Oceania(to)', 'value': 10348},
+ {'source': 'South America(from)', 'target': 'Africa(to)', 'value': 6},
+ {'source': 'South America(from)', 'target': 'Asia(to)', 'value': 29},
+ {'source': 'South America(from)', 'target': 'Europe(to)', 'value': 446962},
+ {'source': 'South America(from)',
+  'target': 'North America(to)',
+  'value': 1221161},
+ {'source': 'South America(from)', 'target': 'Oceania(to)', 'value': 5392},
+ {'source': 'South America(from)',
+  'target': 'South America(to)',
+  'value': 4410890},
+ {'source': 'Oceania(from)', 'target': 'South America(to)', 'value': 0}]
+
+pic_all=(
+    Sankey().add(
+        '',
+        nodes,
+        linkes_all,
+        # set the opacity, shape and color
+        linestyle_opt=opts.LineStyleOpts(opacity=0.3,curve=0.5,color='gradient'),
+        # set the labels
+        label_opts=opts.LabelOpts(position='right'),
+        # set the gap between nodes
+        node_gap=4,
+    )
+    .set_global_opts(title_opts=opts.TitleOpts(title='Sankey Plot of Global Refugee Movement',pos_left = '20%'))
+)
+pic_all.render_notebook()
+```
+
+According to this sankey plot of global refugee movement, we can clearly observe that Africa, Asia and Europe have most refugee inflows and outflows in past 20 years. Also, this graph tells us that the vast majority of refugees in Asia and Africa move only within continents. However, more than half of refugees who move towards Europe come from other continents. 
+
+
+```{python}
+# create linkes for the sankey plot of refugees from and to Europe
+linkes_eu=[{'source':'Europe(from)','target':'Europe(to)','value':14604476},
+       {'source':'Europe(from)','target':'Asia(to)','value':165855},
+       {'source':'Europe(from)','target':'Africa(to)','value':1704},
+       {'source':'Europe(from)','target':'North America(to)','value':1363642},
+       {'source':'Europe(from)','target':'South America(to)','value':11267},
+       {'source':'Europe(from)','target':'Oceania(to)','value':57619},
+       {'source':'Asia(from)','target':'Europe(to)','value':22189323},
+       {'source':'Africa(from)','target':'Europe(to)','value':8192838},
+       {'source':'North America(from)','target':'Europe(to)','value':178064},
+       {'source':'South America(from)','target':'Europe(to)','value':446962},
+       {'source':'Oceania(from)','target':'Europe(to)','value':1316}]
+
+pic_eu=(
+    Sankey().add(
+        '',
+        nodes,
+        linkes_eu,
+        # set the opacity, shape and color
+        linestyle_opt=opts.LineStyleOpts(opacity=0.5,curve=0.5,color='gradient'),
+        # set the labels
+        label_opts=opts.LabelOpts(position='right'),
+        # set the gap between nodes
+        node_gap=10,
+    )
+    .set_global_opts(title_opts=opts.TitleOpts(title='Refugees from and to Europe',pos_left = '25%'))
+)
+pic_eu.render_notebook()
+```
+
+Unlike the former plot of global refugee flows, this graph only display refugees from and to Europe since 2002. From this plot, we notice that most of refugees that origin from Europe move to other European countries and a considerable number of refugees move to North America. By contrast, for the refugees move to Europe, almost half are from Asia, followed by Europe and Africa.
 
 ### Specific Conflict Study: Conflict of Balkans (2002 - 2010)
 
