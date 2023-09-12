@@ -1,0 +1,11 @@
+[{'source':'Europe(from)','target':'Europe(to)','value':14604476},
+       {'source':'Europe(from)','target':'Asia(to)','value':165855},
+       {'source':'Europe(from)','target':'Africa(to)','value':1704},
+       {'source':'Europe(from)','target':'North America(to)','value':1363642},
+       {'source':'Europe(from)','target':'South America(to)','value':11267},
+       {'source':'Europe(from)','target':'Oceania(to)','value':57619},
+       {'source':'Asia(from)','target':'Europe(to)','value':22189323},
+       {'source':'Africa(from)','target':'Europe(to)','value':8192838},
+       {'source':'North America(from)','target':'Europe(to)','value':178064},
+       {'source':'South America(from)','target':'Europe(to)','value':446962},
+       {'source':'Oceania(from)','target':'Europe(to)','value':1316}]
