@@ -1,7 +1,10 @@
 # Refugee Crisis in Europe in the 21st Century
 
-**website :**
+**website:**
 https://williamchu.georgetown.domains/website/
+
+**poster:**
+https://drive.google.com/file/d/1LfpCrjf7CVkN3Mv04JFhnwyePmB_FrZO/view?usp=drive_link
 
 ## Team-08
  
